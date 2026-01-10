@@ -8,4 +8,5 @@ type Store struct {
 
 func NewDatabase(db *sql.DB) *Store {
 	return &Store{DB: db}
+
 }
