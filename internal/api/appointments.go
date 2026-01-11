@@ -8,9 +8,18 @@ import (
 )
 
 type AppointmentReqs struct {
-	DateTime string `json:"appointment_date_time"`
-	Customer int    `json:"customer_id"`
-	Notes    string `json:"notes"`
+	DateTime  string `json:"appointment_date_time"`
+	Notes     string `json:"notes"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
+	Phone     string `json:"phone"`
+	Address   string `json:"address"`
+	Make      string `json:"make"`
+	Model     string `json:"model"`
+	Year      int    `json:"year"`
+	Vin       string `json:"vin"`
+	Mileage   int    `json:"mileage"`
 }
 
 func (a *App) GetAppointmentById(c *gin.Context) {
@@ -50,9 +59,18 @@ func (a *App) CreateAppointment(c *gin.Context) {
 	}
 
 	if err := a.Store.CreateAppointment(store.Appointment{
-		DateTime: newApp.DateTime,
-		Customer: newApp.Customer,
-		Notes:    newApp.Notes,
+		DateTime:  newApp.DateTime,
+		Notes:     newApp.Notes,
+		FirstName: newApp.FirstName,
+		LastName:  newApp.LastName,
+		Email:     newApp.Email,
+		Phone:     newApp.Phone,
+		Address:   newApp.Address,
+		Make:      newApp.Make,
+		Model:     newApp.Model,
+		Year:      newApp.Year,
+		Vin:       newApp.Vin,
+		Mileage:   newApp.Mileage,
 	}); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "error creating appointment"})
 		return
