@@ -20,7 +20,7 @@ type Appointment struct {
 }
 
 func (s *Store) GetAppointmentById(id string) (Appointment, error) {
-	row := s.DB.QueryRow("SELECT appointment_date_time, notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage FROM appointments WHERE customer_id=$1", id)
+	row := s.DB.QueryRow("SELECT appointment_date_time, notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage FROM appointments WHERE id=$1", id)
 
 	var app Appointment
 

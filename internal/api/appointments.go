@@ -54,7 +54,7 @@ func (a *App) CreateAppointment(c *gin.Context) {
 
 	// gets the appointment data from the request
 	if err := c.BindJSON(&newApp); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "missing appointment data"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid appointment data"})
 		return
 	}
 
