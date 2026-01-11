@@ -8,7 +8,6 @@ import (
 )
 
 type AppointmentReqs struct {
-	DateTime  string `json:"appointment_date_time"`
 	Notes     string `json:"notes"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
@@ -20,12 +19,15 @@ type AppointmentReqs struct {
 	Year      int    `json:"year"`
 	Vin       string `json:"vin"`
 	Mileage   int    `json:"mileage"`
+	Date      string `json:"date"`
+	Start     string `json:"start_time"`
+	End       string `json:"end_time"`
 }
 
-func (a *App) GetAppointmentById(c *gin.Context) {
-	id := c.Param("id")
+func (a *App) GetAppointmentOnDay(c *gin.Context) {
+	date := c.Param("date")
 
-	app, err := a.Store.GetAppointmentById(id)
+	app, err := a.Store.GetAppointmentOnDay(date)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "not found"})
@@ -48,7 +50,6 @@ func (a *App) GetAppointments(c *gin.Context) {
 
 }
 
-// adds the appointment associates it a user, and adds it to the database
 func (a *App) CreateAppointment(c *gin.Context) {
 	var newApp AppointmentReqs
 
@@ -59,7 +60,6 @@ func (a *App) CreateAppointment(c *gin.Context) {
 	}
 
 	if err := a.Store.CreateAppointment(store.Appointment{
-		DateTime:  newApp.DateTime,
 		Notes:     newApp.Notes,
 		FirstName: newApp.FirstName,
 		LastName:  newApp.LastName,
@@ -71,6 +71,9 @@ func (a *App) CreateAppointment(c *gin.Context) {
 		Year:      newApp.Year,
 		Vin:       newApp.Vin,
 		Mileage:   newApp.Mileage,
+		Date:      newApp.Date,
+		Start:     newApp.Start,
+		End:       newApp.End,
 	}); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "error creating appointment"})
 		return

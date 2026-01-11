@@ -1,11 +1,11 @@
 package store
 
 import (
+	"database/sql"
 	"fmt"
 )
 
 type Appointment struct {
-	DateTime  string `json:"appointment_date_time"`
 	Notes     string `json:"notes"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
@@ -17,40 +17,46 @@ type Appointment struct {
 	Year      int    `json:"year"`
 	Vin       string `json:"vin"`
 	Mileage   int    `json:"mileage"`
+	Date      string `json:"date"`
+	Start     string `json:"start_time"`
+	End       string `json:"end_time"`
 }
 
-func (s *Store) GetAppointmentById(id string) (Appointment, error) {
-	row := s.DB.QueryRow("SELECT appointment_date_time, notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage FROM appointments WHERE id=$1", id)
+func parseRows(rows *sql.Rows) ([]Appointment, error) {
+	defer rows.Close()
 
-	var app Appointment
+	appointments := []Appointment{}
+	for rows.Next() {
+		var app Appointment
+		if err := rows.Scan(&app.Notes, &app.FirstName, &app.LastName, &app.Email, &app.Phone, &app.Address, &app.Make, &app.Model, &app.Year, &app.Vin, &app.Mileage, &app.Date, &app.Start, &app.End); err != nil {
+			return appointments, err
+		}
+		appointments = append(appointments, app)
+	}
+	return appointments, nil
+}
 
-	if err := row.Scan(&app.DateTime, &app.Notes, &app.FirstName, &app.LastName, &app.Email, &app.Phone, &app.Address, &app.Make, &app.Model, &app.Year, &app.Vin, &app.Mileage); err != nil {
-		return app, err
+func (s *Store) GetAppointmentOnDay(date string) ([]Appointment, error) {
+	rows, err := s.DB.Query("SELECT notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage, date, start_time, end_time FROM appointments WHERE date=$1 ORDER BY start_time", date)
+
+	if err != nil {
+		return nil, err
 	}
 
-	return app, nil
+	return parseRows(rows)
 }
 
 func (s *Store) GetAppointments() ([]Appointment, error) {
-	rows, err := s.DB.Query("SELECT appointment_date_time, notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage FROM appointments")
+	rows, err := s.DB.Query("SELECT notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage, date, start_time, end_time FROM appointments")
 
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	appointments := []Appointment{}
-	for rows.Next() {
-		var app Appointment
-		if err := rows.Scan(&app.DateTime, &app.Notes, &app.FirstName, &app.LastName, &app.Email, &app.Phone, &app.Address, &app.Make, &app.Model, &app.Year, &app.Vin, &app.Mileage); err != nil {
-			return appointments, err
-		}
-		appointments = append(appointments, app)
-	}
-	return appointments, err
+	return parseRows(rows)
 }
 
-// adds the appointment associates it a user, and adds it to the database
 func (s *Store) CreateAppointment(app Appointment) error {
 	// begins a transaction
 	tx, err := s.DB.Begin()
@@ -60,8 +66,7 @@ func (s *Store) CreateAppointment(app Appointment) error {
 	}
 
 	// formats the query with the given data
-	query := fmt.Sprintf("INSERT INTO appointments(appointment_date_time, notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage) VALUES('%s'::timestamptz, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', %d)", app.DateTime, app.Notes, app.FirstName, app.LastName, app.Email, app.Phone, app.Address, app.Make, app.Model, app.Year, app.Vin, app.Mileage)
-
+	query := fmt.Sprintf("INSERT INTO appointments(notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage, date, start_time, end_time) VALUES('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', %d, '%s', '%s', '%s')", app.Notes, app.FirstName, app.LastName, app.Email, app.Phone, app.Address, app.Make, app.Model, app.Year, app.Vin, app.Mileage, app.Date, app.Start, app.End)
 	// attempts to execute the query
 	_, err = tx.Exec(query)
 
