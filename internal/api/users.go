@@ -12,6 +12,7 @@ func (a *App) GetUsersById(c *gin.Context) {
 	user, err := a.Store.GetUsersById(id)
 	if err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
 	}
 	c.IndentedJSON(http.StatusOK, user)
 }
@@ -21,6 +22,7 @@ func (a *App) GetUsers(c *gin.Context) {
 	users, err := a.Store.GetUsers()
 	if err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
 	}
 	c.IndentedJSON(http.StatusOK, users)
 }
