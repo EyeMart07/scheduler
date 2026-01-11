@@ -20,6 +20,7 @@ func (a *App) GetAppointmentById(c *gin.Context) {
 
 	if err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
 	}
 
 	c.IndentedJSON(http.StatusOK, app)
@@ -31,6 +32,7 @@ func (a *App) GetAppointments(c *gin.Context) {
 
 	if err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
 	}
 
 	c.IndentedJSON(http.StatusOK, app)
