@@ -19,22 +19,34 @@ type AuthReq struct {
 }
 
 type AuthResp struct {
-	Customer string `json:"customer"`
+	Customer string `json:"id"`
 	Password string `json:"password_hash"`
+}
+
+func (s *Store) CheckAdmin(user string) bool {
+	var email string
+	row := s.DB.QueryRow("SELECT email FROM users WHERE id=$1 AND role='admin'", user)
+
+	if err := row.Scan(&email); err != nil {
+		return false
+	}
+
+	return true
 }
 
 // returns the user id if the log in is successful
 func (s *Store) Authorize(credentials AuthReq) string {
 
 	var user AuthResp
-	row := s.DB.QueryRow("SELECT customer password_hash FROM users WHERE email=$1", credentials.Email)
+	row := s.DB.QueryRow("SELECT id, password_hash FROM users WHERE email=$1", credentials.Email)
 
-	if err := row.Scan(&user); err != nil {
+	if err := row.Scan(&user.Customer, &user.Password); err != nil {
 		return ""
 	}
 
-	attempt, _ := bcrypt.GenerateFromPassword([]byte(credentials.Password), 14)
-	if err := bcrypt.CompareHashAndPassword(attempt, []byte(user.Password)); err != nil {
+	attempt := []byte(credentials.Password)
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), attempt); err != nil {
+		fmt.Println(err)
 		return ""
 	}
 
@@ -61,19 +73,19 @@ func (s *Store) CreateUser(user User) (string, error) {
 		return "", err
 	}
 
-	row := tx.QueryRow("SELECT id from users where email=%s", user.Email)
-
-	var customerId string
-	if err := row.Scan(&customerId); err != nil {
-		tx.Rollback()
-		return "", err
-	}
-
 	// attempts to commit the transaction if the query succeeds
 	err = tx.Commit()
 
 	if err != nil {
 		return "", err
 	}
+
+	row := s.DB.QueryRow("SELECT id from users where email=$1", user.Email)
+
+	var customerId string
+	if err := row.Scan(&customerId); err != nil {
+		return "", err
+	}
+
 	return customerId, nil
 }

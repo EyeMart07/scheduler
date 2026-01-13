@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -17,12 +18,12 @@ type SignUpReq struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
-	Password  string `json:"password_hash"`
+	Password  string `json:"password"`
 }
 
 type AuthReq struct {
 	Email    string `json:"email"`
-	Password string `json:"password_hash"`
+	Password string `json:"password"`
 }
 
 func (a *App) setSessionCookie(c *gin.Context, customerId string) error {
@@ -55,17 +56,37 @@ func (a *App) setSessionCookie(c *gin.Context, customerId string) error {
 	return nil
 }
 
+func (a *App) CheckAdmin(c *gin.Context) {
+	user, exists := c.Get("user")
+	if !exists {
+		c.IndentedJSON(http.StatusUnauthorized, gin.H{"error": "not logged in"})
+		c.AbortWithStatus(http.StatusUnauthorized) //user is not authorized
+		return
+	}
+
+	if admin := a.Store.CheckAdmin(fmt.Sprintf("%v", user)); !admin {
+		c.IndentedJSON(http.StatusUnauthorized, gin.H{"error": "not authorized"})
+		c.AbortWithStatus(http.StatusUnauthorized) //user is not authorized
+		return
+	}
+	c.Next()
+}
+
 func (a *App) CheckAuth(c *gin.Context) {
 	token, err := c.Cookie("session")
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
-		return
+		c.AbortWithStatus(http.StatusUnauthorized) //user is not authorized
 	}
 
-	if userid := a.Store.CheckAuth(token); userid != "" {
+	hash := sha256.Sum256([]byte(token))
+
+	if userid := a.Store.CheckAuth(hash); userid != "" {
 		c.Set("user", userid)
 		c.Next()
+		return
 	}
+	c.IndentedJSON(http.StatusUnauthorized, gin.H{"error": "not authorized"})
 	c.AbortWithStatus(http.StatusUnauthorized) //user is not authorized
 }
 
@@ -92,7 +113,7 @@ func (a *App) SignUp(c *gin.Context) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "error creating account"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "error hashing password"})
 		return
 	}
 
@@ -109,14 +130,23 @@ func (a *App) SignUp(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "account successfully created"})
+	if err := a.setSessionCookie(c, customerId); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "error creating session"})
+		return
+	}
 
-	a.setSessionCookie(c, customerId)
+	c.JSON(http.StatusCreated, gin.H{"message": "account successfully created"})
 
 }
 
 func (a *App) SignIn(c *gin.Context) {
 	var credentials AuthReq
+
+	if err := c.BindJSON(&credentials); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "error signing in"})
+		fmt.Println(err)
+		return
+	}
 
 	customerId := a.Store.Authorize(store.AuthReq{
 		Email:    credentials.Email,
@@ -130,6 +160,7 @@ func (a *App) SignIn(c *gin.Context) {
 
 	if err := a.setSessionCookie(c, customerId); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "error signing in"})
+		fmt.Println(err)
 		return
 	}
 
