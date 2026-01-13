@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wrench, Zap, Droplet, Gauge, Shield, Clock } from 'lucide-react';
+import { Wrench, Zap, Droplet, Gauge, Shield, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface Service {
@@ -36,9 +36,9 @@ const ServicesSection: React.FC = () => {
       description: 'Keep your vehicle running smoothly with our maintenance packages.'
     },
     {
-      icon: <Clock className="w-8 h-8" />,
-      title: '24/7 Emergency Service',
-      description: 'Roadside assistance and emergency repairs available around the clock.'
+      icon: <MapPin className="w-8 h-8" />,
+      title: 'Local Service',
+      description: 'Don\'t worry about making it to a shop, we go to you with equipment on hand.'
     }
   ];
 

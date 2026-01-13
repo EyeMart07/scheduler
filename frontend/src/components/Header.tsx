@@ -16,10 +16,7 @@ const Header: React.FC = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 font-bold text-xl text-gray-900 hover:text-gray-700 transition-colors">
-            <div className="bg-gray-900 p-2 rounded-lg">
-              <Wrench className="w-5 h-5 text-white" />
-            </div>
-            <span>MechaniX</span>
+            <span>Andrade's Mobile Mechanic</span>
           </Link>
 
           {/* Desktop Navigation */}

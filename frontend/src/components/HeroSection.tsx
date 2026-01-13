@@ -20,12 +20,8 @@ const HeroSection: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <div className="flex items-center gap-2 mb-6">
-              <Zap className="w-5 h-5 text-blue-400" />
-              <span className="text-blue-400 font-semibold text-sm">Professional Mobile Mechanic</span>
-            </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Your Car, Our Expertise, <span className="text-blue-400">Anytime</span>
+              Your Car, Our Expertise, <span className="text-blue-400">At Your Convenience</span>
             </h1>
             <p className="text-lg text-gray-300 mb-8 leading-relaxed">
               Professional automotive repair and maintenance services delivered right to your driveway. Fast, reliable, and transparent pricing.

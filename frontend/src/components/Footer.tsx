@@ -1,5 +1,7 @@
 import React from 'react';
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+
 
 const Footer: React.FC = () => {
   return (
@@ -8,7 +10,7 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Company Info */}
           <div>
-            <h3 className="font-bold text-lg mb-4">MechaniX</h3>
+            <h3 className="font-bold text-lg mb-4">Andrade's Mobile Mechanic</h3>
             <p className="text-gray-400 text-sm">Professional mobile mechanic services at your doorstep.</p>
           </div>
 
@@ -19,7 +21,6 @@ const Footer: React.FC = () => {
               <li><a href="#" className="hover:text-white transition-colors">Home</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Services</a></li>
               <li><a href="#" className="hover:text-white transition-colors">About</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
             </ul>
           </div>
 
@@ -36,33 +37,33 @@ const Footer: React.FC = () => {
                 <a href="mailto:info@mechanix.com" className="hover:text-white transition-colors">info@mechanix.com</a>
               </li>
               <li className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 mt-0.5" />
-                <span>Available 24/7 in your area</span>
+                 <Link
+                    to="https://www.instagram.com/andradesmobilemechanic/"
+                    >
+                    <Instagram className="w-4 h-4 mt-0.5" />
+                    
+                </Link>
+                @andradesmobilemechanic
               </li>
             </ul>
           </div>
 
           {/* Social Links */}
-          <div>
+          {/* <div>
             <h4 className="font-semibold mb-4">Follow Us</h4>
             <div className="flex gap-4">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-900 rounded-lg p-2" aria-label="Facebook">
-                <Facebook className="w-5 h-5" />
-              </a>
+              
               <a href="#" className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-900 rounded-lg p-2" aria-label="Instagram">
                 <Instagram className="w-5 h-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-900 rounded-lg p-2" aria-label="Twitter">
-                <Twitter className="w-5 h-5" />
-              </a>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Divider */}
         <div className="border-t border-gray-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
-            <p>&copy; 2026 MechaniX. All rights reserved.</p>
+            <p>&copy; 2026 Andrade's Mobile Mechanic. All rights reserved.</p>
             <div className="flex gap-6 mt-4 md:mt-0">
               <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
