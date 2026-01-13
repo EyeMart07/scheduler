@@ -24,22 +24,11 @@ type AppointmentReqs struct {
 	End       string `json:"end_time"`
 }
 
-func (a *App) GetAppointmentOnDay(c *gin.Context) {
-	date := c.Param("date")
-
-	app, err := a.Store.GetAppointmentOnDay(date)
-
-	if err != nil {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "not found"})
-		return
-	}
-
-	c.IndentedJSON(http.StatusOK, app)
-
-}
-
 func (a *App) GetAppointments(c *gin.Context) {
-	app, err := a.Store.GetAppointments()
+	date := c.Query("date")
+	app, err := a.Store.GetAppointments(store.AppointmentArguments{
+		Date: &date,
+	})
 
 	if err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "not found"})

@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 type Appointment struct {
@@ -36,18 +37,40 @@ func parseRows(rows *sql.Rows) ([]Appointment, error) {
 	return appointments, nil
 }
 
-func (s *Store) GetAppointmentOnDay(date string) ([]Appointment, error) {
-	rows, err := s.DB.Query("SELECT notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage, date, start_time, end_time FROM appointments WHERE date=$1 ORDER BY start_time", date)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return parseRows(rows)
+type AppointmentArguments struct {
+	Date *string `json:"date"`
 }
 
-func (s *Store) GetAppointments() ([]Appointment, error) {
-	rows, err := s.DB.Query("SELECT notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage, date, start_time, end_time FROM appointments")
+func buildAppointmentQuery(queried AppointmentArguments) (string, []any) {
+	q := `SELECT notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage, date, start_time, end_time FROM appointments`
+
+	where := []string{}
+	args := []any{}
+
+	add := func(cond string, val any) {
+		args = append(args, val)
+		where = append(where, fmt.Sprintf(cond, len(args))) // %d becomes $1, $2...
+	}
+
+	// date = matches a whole day (recommended: [dayStart, nextDay))
+	if queried.Date != nil {
+		add("date = $%d", *queried.Date)
+	}
+
+	if len(where) > 0 {
+		q += " WHERE " + strings.Join(where, " AND ")
+	}
+
+	q += " ORDER BY start_time ASC"
+
+	return q, args
+}
+
+func (s *Store) GetAppointments(queried AppointmentArguments) ([]Appointment, error) {
+
+	query, args := buildAppointmentQuery(queried)
+
+	rows, err := s.DB.Query(query, args...)
 
 	if err != nil {
 		return nil, err
@@ -66,9 +89,7 @@ func (s *Store) CreateAppointment(app Appointment) error {
 	}
 
 	// formats the query with the given data
-	query := fmt.Sprintf("INSERT INTO appointments(notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage, date, start_time, end_time) VALUES('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', %d, '%s', '%s', '%s')", app.Notes, app.FirstName, app.LastName, app.Email, app.Phone, app.Address, app.Make, app.Model, app.Year, app.Vin, app.Mileage, app.Date, app.Start, app.End)
-	// attempts to execute the query
-	_, err = tx.Exec(query)
+	_, err = tx.Exec("INSERT INTO appointments(notes, first_name, last_name, email, phone, address, make, model, year, vin, mileage, date, start_time, end_time) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", app.Notes, app.FirstName, app.LastName, app.Email, app.Phone, app.Address, app.Make, app.Model, app.Year, app.Vin, app.Mileage, app.Date, app.Start, app.End)
 
 	if err != nil {
 		tx.Rollback()

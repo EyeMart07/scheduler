@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -11,8 +12,36 @@ type Availability struct {
 	End   string `json:"end_time"`
 }
 
-func (s *Store) GetAvailability(day string) (Availability, error) {
-	row := s.DB.QueryRow("SELECT date, start_time, end_time FROM availability WHERE date=$1", day)
+type AvailabilityArguments struct {
+	Date *string `json:"date"`
+}
+
+func buildAvailabilityQuery(queried AvailabilityArguments) (string, []any) {
+	q := `SELECT date, start_time, end_time FROM availability`
+
+	where := []string{}
+	args := []any{}
+
+	add := func(cond string, val any) {
+		args = append(args, val)
+		where = append(where, fmt.Sprintf(cond, len(args))) // %d becomes $1, $2...
+	}
+
+	// date = matches a whole day (recommended: [dayStart, nextDay))
+	if queried.Date != nil {
+		add("date = $%d", *queried.Date)
+	}
+
+	if len(where) > 0 {
+		q += " WHERE " + strings.Join(where, " AND ")
+	}
+
+	return q, args
+}
+
+func (s *Store) GetAvailability(queried AvailabilityArguments) (Availability, error) {
+	query, args := buildAvailabilityQuery(queried)
+	row := s.DB.QueryRow(query, args...)
 
 	var avail Availability
 
@@ -28,7 +57,11 @@ type TimeSlot struct {
 	End   string `json:"end_time"`
 }
 
-func (s *Store) GetTimeSlots(day string) ([]TimeSlot, error) {
+type TimeSlotArguments struct {
+	Date *string `json:"date"`
+}
+
+func (s *Store) GetTimeSlots(queried TimeSlotArguments) ([]TimeSlot, error) {
 	var availability Availability
 	var appointments []Appointment
 	var err1, err2 error
@@ -38,12 +71,16 @@ func (s *Store) GetTimeSlots(day string) ([]TimeSlot, error) {
 
 	go func() {
 		defer wg.Done()
-		availability, err1 = s.GetAvailability(day)
+		availability, err1 = s.GetAvailability(AvailabilityArguments{
+			Date: queried.Date,
+		})
 	}()
 
 	go func() {
 		defer wg.Done()
-		appointments, err2 = s.GetAppointmentOnDay(day)
+		appointments, err2 = s.GetAppointments(AppointmentArguments{
+			Date: queried.Date,
+		})
 	}()
 
 	wg.Wait()
@@ -85,11 +122,8 @@ func (s *Store) AddAvailability(avail Availability) error {
 		tx.Rollback()
 		return err
 	}
-
-	// formats the query with the given data
-	query := fmt.Sprintf("INSERT INTO availability(date, start_time, end_time) VALUES('%s', '%s', '%s')", avail.Date, avail.Start, avail.End)
 	// attempts to execute the query
-	_, err = tx.Exec(query)
+	_, err = tx.Exec("INSERT INTO availability(date, start_time, end_time) VALUES($1, $2, $3)", avail.Date, avail.Start, avail.End)
 
 	if err != nil {
 		tx.Rollback()

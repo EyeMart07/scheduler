@@ -14,6 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// requirements to sign in
 type SignUpReq struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
@@ -21,21 +22,27 @@ type SignUpReq struct {
 	Password  string `json:"password"`
 }
 
+// requirements to sign in
 type AuthReq struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
+// creates a session cookie, adds it to the database and adds it to your cookies
 func (a *App) setSessionCookie(c *gin.Context, customerId string) error {
+	// generate a random byte array
 	b := make([]byte, 32) // 256-bit
 	if _, err := rand.Read(b); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "error signing in"})
 		return err
 	}
 
-	raw := base64.RawURLEncoding.EncodeToString(b) // cookie-safe
-	hash := sha256.Sum256([]byte(raw))             // hash the raw token string
+	// encode that byte array to it is cookie safe
+	raw := base64.RawURLEncoding.EncodeToString(b)
+	// hash that cookie for added security in the database
+	hash := sha256.Sum256([]byte(raw))
 
+	// create a session entry in the database
 	if err := a.Store.CreateSession(store.Session{
 		Customer:    customerId,
 		SessionHash: hash,
@@ -43,6 +50,7 @@ func (a *App) setSessionCookie(c *gin.Context, customerId string) error {
 		return err
 	}
 
+	// sets the cookie with your session id
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "session",
 		Value:    raw,
@@ -56,11 +64,12 @@ func (a *App) setSessionCookie(c *gin.Context, customerId string) error {
 	return nil
 }
 
+// checks if the use associated in context is of admin role
 func (a *App) CheckAdmin(c *gin.Context) {
 	user, exists := c.Get("user")
 	if !exists {
 		c.IndentedJSON(http.StatusUnauthorized, gin.H{"error": "not logged in"})
-		c.AbortWithStatus(http.StatusUnauthorized) //user is not authorized
+		c.AbortWithStatus(http.StatusUnauthorized) //user doesn't exist
 		return
 	}
 
@@ -72,6 +81,7 @@ func (a *App) CheckAdmin(c *gin.Context) {
 	c.Next()
 }
 
+// checks if the user has a valid session id
 func (a *App) CheckAuth(c *gin.Context) {
 	token, err := c.Cookie("session")
 	if err != nil {
@@ -79,8 +89,10 @@ func (a *App) CheckAuth(c *gin.Context) {
 		c.AbortWithStatus(http.StatusUnauthorized) //user is not authorized
 	}
 
+	// hash the session id in the cookies
 	hash := sha256.Sum256([]byte(token))
 
+	// if there exists a valid session entry, set the user id in context
 	if userid := a.Store.CheckAuth(hash); userid != "" {
 		c.Set("user", userid)
 		c.Next()
@@ -90,6 +102,7 @@ func (a *App) CheckAuth(c *gin.Context) {
 	c.AbortWithStatus(http.StatusUnauthorized) //user is not authorized
 }
 
+// creates a new user and then automatically signs that user in
 func (a *App) SignUp(c *gin.Context) {
 	var req SignUpReq
 
@@ -98,6 +111,7 @@ func (a *App) SignUp(c *gin.Context) {
 		return
 	}
 
+	// normalize email and password
 	email := strings.TrimSpace(strings.ToLower(req.Email))
 	password := req.Password
 
@@ -110,6 +124,7 @@ func (a *App) SignUp(c *gin.Context) {
 		return
 	}
 
+	// hash password
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 
 	if err != nil {
@@ -117,6 +132,7 @@ func (a *App) SignUp(c *gin.Context) {
 		return
 	}
 
+	// creates a new user in the table
 	var customerId string
 	customerId, err = a.Store.CreateUser(store.User{
 		FirstName: req.FirstName,
@@ -130,15 +146,16 @@ func (a *App) SignUp(c *gin.Context) {
 		return
 	}
 
+	// logs in the user by creating a new session
 	if err := a.setSessionCookie(c, customerId); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "error creating session"})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "account successfully created"})
-
 }
 
+// signs in an existing user
 func (a *App) SignIn(c *gin.Context) {
 	var credentials AuthReq
 
@@ -148,16 +165,19 @@ func (a *App) SignIn(c *gin.Context) {
 		return
 	}
 
+	// authorize the credentials
 	customerId := a.Store.Authorize(store.AuthReq{
 		Email:    credentials.Email,
 		Password: credentials.Password,
 	})
 
+	// if no the credentials do not match any users return an error
 	if customerId == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid credentials"})
 		return
 	}
 
+	// set a new session cookie
 	if err := a.setSessionCookie(c, customerId); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "error signing in"})
 		fmt.Println(err)

@@ -15,9 +15,11 @@ type Availability struct {
 
 func (a *App) GetAvailability(c *gin.Context) {
 
-	day := c.Param("date")
+	date := c.Query("date")
 
-	avail, err := a.Store.GetAvailability(day)
+	avail, err := a.Store.GetAvailability(store.AvailabilityArguments{
+		Date: &date,
+	})
 	if err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -27,9 +29,11 @@ func (a *App) GetAvailability(c *gin.Context) {
 }
 
 func (a *App) GetTimeSlots(c *gin.Context) {
-	day := c.Param("date")
+	date := c.Query("date")
 
-	timeSlots, err := a.Store.GetTimeSlots(day)
+	timeSlots, err := a.Store.GetTimeSlots(store.TimeSlotArguments{
+		Date: &date,
+	})
 
 	if err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "not found"})

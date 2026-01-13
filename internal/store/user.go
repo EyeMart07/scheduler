@@ -64,9 +64,8 @@ func (s *Store) CreateUser(user User) (string, error) {
 	}
 
 	// formats the query with the given data
-	query := fmt.Sprintf("INSERT INTO users(first_name, last_name, email, password_hash) VALUES('%s', '%s', '%s', '%s')", user.FirstName, user.LastName, user.Email, user.Password)
 	// attempts to execute the query
-	_, err = tx.Exec(query)
+	_, err = tx.Exec("INSERT INTO users(first_name, last_name, email, password_hash) VALUES($1, $2, $3, $4)", user.FirstName, user.LastName, user.Email, user.Password)
 
 	if err != nil {
 		tx.Rollback()
