@@ -38,7 +38,8 @@ func parseRows(rows *sql.Rows) ([]Appointment, error) {
 }
 
 type AppointmentArguments struct {
-	Date *string `json:"date"`
+	FromDate *string `json:"from_date"`
+	ToDate   *string `json:"to_date"`
 }
 
 func buildAppointmentQuery(queried AppointmentArguments) (string, []any) {
@@ -49,12 +50,14 @@ func buildAppointmentQuery(queried AppointmentArguments) (string, []any) {
 
 	add := func(cond string, val any) {
 		args = append(args, val)
-		where = append(where, fmt.Sprintf(cond, len(args))) // %d becomes $1, $2...
+		where = append(where, fmt.Sprintf(cond, len(args)))
 	}
 
-	// date = matches a whole day (recommended: [dayStart, nextDay))
-	if queried.Date != nil {
-		add("date = $%d", *queried.Date)
+	if queried.ToDate != nil && queried.FromDate != nil {
+		add("date >= $%d", *queried.FromDate)
+		add("date <= $%d", *queried.ToDate)
+	} else if queried.FromDate != nil {
+		add("date = $%d", *queried.FromDate)
 	}
 
 	if len(where) > 0 {
@@ -80,12 +83,76 @@ func (s *Store) GetAppointments(queried AppointmentArguments) ([]Appointment, er
 	return parseRows(rows)
 }
 
-func (s *Store) CreateAppointment(app Appointment) error {
+func (s *Store) ChangeAppointment(id string, changes Appointment) (string, string, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		tx.Rollback()
+		return "", "", err
+	}
+
+	row := s.DB.QueryRow("SELECT email, phone FROM appointments WHERE id=$1", id)
+
+	var email string
+	var phone string
+	if err := row.Scan(&email, &phone); err != nil {
+		return "", "", err
+	}
+
+	// formats the query with the given data
+	_, err = tx.Exec("UPDATE appointments SET notes=$1, first_name=$2, last_name=$3, email=$4, phone=$5, address=$6, make=$7, model=$8, year=$9, vin=$10, mileage=$11, date=$12, start_time=$13, end_time=$14 WHERE id=$15", id, changes.Notes, changes.FirstName, changes.LastName, changes.Email, changes.Phone, changes.Address, changes.Make, changes.Model, changes.Year, changes.Vin, changes.Mileage, changes.Date, changes.Start, changes.End, id)
+
+	if err != nil {
+		tx.Rollback()
+		return "", "", err
+	}
+
+	// attempts to commit the transaction if the query succeeds
+	err = tx.Commit()
+
+	if err != nil {
+		return "", "", err
+	}
+	return email, phone, nil
+}
+
+func (s *Store) DeleteAppointment(id string) (string, string, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		tx.Rollback()
+		return "", "", err
+	}
+
+	row := s.DB.QueryRow("SELECT email, phone FROM appointments WHERE id=$1", id)
+
+	var email string
+	var phone string
+	if err := row.Scan(&email, &phone); err != nil {
+		return "", "", err
+	}
+
+	// formats the query with the given data
+	_, err = tx.Exec("DELETE FROM appointments WHERE id=$1", id)
+
+	if err != nil {
+		tx.Rollback()
+		return "", "", err
+	}
+
+	// attempts to commit the transaction if the query succeeds
+	err = tx.Commit()
+
+	if err != nil {
+		return "", "", err
+	}
+	return email, phone, nil
+}
+
+func (s *Store) CreateAppointment(app Appointment) (string, error) {
 	// begins a transaction
 	tx, err := s.DB.Begin()
 	if err != nil {
 		tx.Rollback()
-		return err
+		return "", err
 	}
 
 	// formats the query with the given data
@@ -93,14 +160,22 @@ func (s *Store) CreateAppointment(app Appointment) error {
 
 	if err != nil {
 		tx.Rollback()
-		return err
+		return "", err
 	}
 
 	// attempts to commit the transaction if the query succeeds
 	err = tx.Commit()
 
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+
+	row := s.DB.QueryRow("SELECT id FROM appointments WHERE email=$1 AND date=$2 AND start_time=$3, end_time=$4", app.Email, app.Date, app.Start, app.End)
+
+	var appId string
+	if err := row.Scan(&appId); err != nil {
+		return "", err
+	}
+
+	return appId, nil
 }

@@ -28,6 +28,28 @@ func (a *App) GetAvailability(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, avail)
 }
 
+func (a *App) ChangeAvailability(c *gin.Context) {
+	date := c.Param("date")
+
+	var changes Availability
+
+	if err := c.BindJSON(&changes); err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid availability data"})
+		return
+	}
+
+	if err := a.Store.ChangeAvailability(store.Availability{
+		Date:  date,
+		Start: changes.Start,
+		End:   changes.End,
+	}); err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "successfully updated availability"})
+}
+
 func (a *App) GetTimeSlots(c *gin.Context) {
 	date := c.Query("date")
 

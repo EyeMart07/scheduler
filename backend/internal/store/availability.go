@@ -61,6 +61,30 @@ type TimeSlotArguments struct {
 	Date *string `json:"date"`
 }
 
+func (s *Store) ChangeAvailability(changes Availability) error {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// formats the query with the given data
+	_, err = tx.Exec("UPDATE availability SET start_time=$1, end_time=$2 WHERE date=$3", changes.Start, changes.End, changes.Date)
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// attempts to commit the transaction if the query succeeds
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Store) GetTimeSlots(queried TimeSlotArguments) ([]TimeSlot, error) {
 	var availability Availability
 	var appointments []Appointment
@@ -79,7 +103,7 @@ func (s *Store) GetTimeSlots(queried TimeSlotArguments) ([]TimeSlot, error) {
 	go func() {
 		defer wg.Done()
 		appointments, err2 = s.GetAppointments(AppointmentArguments{
-			Date: queried.Date,
+			ToDate: queried.Date,
 		})
 	}()
 
